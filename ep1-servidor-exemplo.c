@@ -39,6 +39,7 @@
 #include <arpa/inet.h>
 #include <time.h>
 #include <unistd.h>
+#include "clients.h"
 
 #define LISTENQ 1
 #define MAXDATASIZE 100
@@ -55,8 +56,10 @@ int main (int argc, char **argv) {
    pid_t childpid;
    /* Armazena linhas recebidas do cliente */
    char	recvline[MAXLINE + 1], command[MAXLINE + 1], params[MAXLINE + 1];
-   /* Armazena o tamanho da string lida do cliente */
-   ssize_t  n;
+   /* Iniciando o gerenciador de clientes */
+   Clients *client;
+   char* nickname, host, username;
+   init_client_manager();
    
 	if (argc != 2) {
       fprintf(stderr,"Uso: %s <Porta>\n",argv[0]);
@@ -166,6 +169,7 @@ int main (int argc, char **argv) {
 	    /* Interpretando os tokens */
 	    if(!strcmp("NICK", command)){
 	      /* Tratamento do comando NICK */
+	      /* Pegar informações do cliente */
 	    } else if(!strcmp("LIST", command)){
 	      /* Lista os canais */
 	    } else if(!strcmp("JOIN", command)){
