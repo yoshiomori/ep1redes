@@ -63,6 +63,7 @@ int main (int argc, char **argv) {
    char nickname[10] = "", host[100] = "", username[100] = "";
    /* Armazena o índice do vetor de clientes */
    int i;
+   int quit = 1;
    init_client_manager();
    
 	if (argc != 2) {
@@ -161,7 +162,10 @@ int main (int argc, char **argv) {
          /* ========================================================= */
          /* TODO: É esta parte do código que terá que ser modificada
           * para que este servidor consiga interpretar comandos IRC   */
-         while ((n=read(connfd, recvline, MAXLINE)) > 0) {
+         while (quit) {
+	   n=read(connfd, recvline, MAXLINE);
+	   if(n < 0)
+	     break;
             recvline[n]=0;
             printf("[Cliente conectado no processo filho %d enviou:] ",getpid());
             if ((fputs(recvline,stdout)) == EOF) {
@@ -170,6 +174,7 @@ int main (int argc, char **argv) {
             }
 	    /* Quebrando a mensagem em tokens */
 	    sscanf(recvline, "%s %s", command, params);
+	    recvline[0] = '\0';
 	    /* Interpretando os tokens */
 	    if(!strcmp("NICK", command)){
 	      /* Tratamento do comando NICK */
@@ -199,23 +204,32 @@ int main (int argc, char **argv) {
 		}
 	      }
 	      /* TODO: Protocolo de saída do controle de concorrencia */
-	    } else if(!strcmp("LIST", command)){
+	    } else if(!strcmp("LIST", command) && strlen(nickname)){
 	      /* Lista os canais */
-	    } else if(!strcmp("JOIN", command)){
+	    } else if(!strcmp("JOIN", command) && strlen(nickname)){
 	      /* Entra no canal */
-	    } else if(!strcmp("PRIVMSG", command)){
+	    } else if(!strcmp("PRIVMSG", command) && strlen(nickname)){
 	      /* Enviar mensagem para o canal especificado */
-	    } else if(!strcmp("DCC", command)){
+	    } else if(!strcmp("DCC", command) && strlen(nickname)){
 	      /* Enviar uma arquivo para o cliente especificado */
-	    } else if(!strcmp("PART", command)){
+	    } else if(!strcmp("PART", command) && strlen(nickname)){
 	      /* Saír do canal */
 	    } else if(!strcmp("QUIT", command)){
 	      /* Desconectar do servidor */
+	      quit = 0;
+	      search_client(nickname, &i);
+	      remove_client(i);
 	    } else{
 	      /* Comando não válido */
+	      if(strlen(nickname)){
+		/* Usuário registrado mas comando inexistente */
+		sprintf(recvline, "%s :Unknown command\n", command);
+	      } else
+		sprintf(recvline, ":You have not registered\n", params);
 	    }
-	    
-            write(connfd, recvline, strlen(recvline));
+	    /* Se tiver mensagem envia */
+	    if(recvline)
+	      write(connfd, recvline, strlen(recvline));
          }
          /* ========================================================= */
          /* ========================================================= */
