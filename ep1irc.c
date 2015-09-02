@@ -56,6 +56,8 @@ int main (int argc, char **argv) {
    pid_t childpid;
    /* Armazena linhas recebidas do cliente */
    char	recvline[MAXLINE + 1], command[MAXLINE + 1], params[MAXLINE + 1];
+   /* Armazena o tamanho da string lida do cliente */
+   ssize_t n;
    /* Iniciando o gerenciador de clientes */
    Clients *client;
    char* nickname, host, username;

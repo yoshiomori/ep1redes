@@ -53,6 +53,8 @@ Clients *search_client(char *nickname, int *i){
   for(*i = 0; *i < *first_free_pos; (*i)++)
     if(!strcmp(clients[*i].nickname, nickname))
       break;
+  if(*i == *first_free_pos)
+    return (Clients*) -1;
   return clients + *i;
 }
 
