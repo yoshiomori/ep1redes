@@ -54,7 +54,7 @@ int main (int argc, char **argv) {
     * é o processo pai */
    pid_t childpid;
    /* Armazena linhas recebidas do cliente */
-	char	recvline[MAXLINE + 1];
+   char	recvline[MAXLINE + 1], command[MAXLINE + 1], params[MAXLINE + 1];
    /* Armazena o tamanho da string lida do cliente */
    ssize_t  n;
    
@@ -161,6 +161,27 @@ int main (int argc, char **argv) {
                perror("fputs :( \n");
                exit(6);
             }
+	    /* Quebrando a mensagem em tokens */
+	    sscanf(recvline, "%s %s", command, params);
+	    /* Interpretando os tokens */
+	    if(!strcmp("NICK", command)){
+	      /* Tratamento do comando NICK */
+	    } else if(!strcmp("LIST", command)){
+	      /* Lista os canais */
+	    } else if(!strcmp("JOIN", command)){
+	      /* Entra no canal */
+	    } else if(!strcmp("PRIVMSG", command)){
+	      /* Enviar mensagem para o canal especificado */
+	    } else if(!strcmp("DCC", command)){
+	      /* Enviar uma arquivo para o cliente especificado */
+	    } else if(!strcmp("PART", command)){
+	      /* Saír do canal */
+	    } else if(!strcmp("QUIT", command)){
+	      /* Desconectar do servidor */
+	    } else{
+	      /* Comando não válido */
+	    }
+	    
             write(connfd, recvline, strlen(recvline));
          }
          /* ========================================================= */
