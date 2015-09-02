@@ -38,12 +38,11 @@ void init_client_manager(){
  * Retorna -1 caso exceda o numero máximo de inserções e
  * 0 se for sucesso.
  */
-int insert_client(char *nickname, char *host, char *username){
-  if(*first_free_pos >= MAXCLIENTS || !nickname || !host || !username)
+int insert_client(char *nickname, char *host){
+  if(*first_free_pos >= MAXCLIENTS || !nickname || !host)
     return -1;
   strcpy(clients[*first_free_pos].nickname, nickname);
-  strcpy(clients[*first_free_pos].host, host);
-  strcpy(clients[(*first_free_pos)++].username, username);
+  strcpy(clients[(*first_free_pos)++].host, host);
   return 0;
 }
 

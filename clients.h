@@ -7,7 +7,7 @@ typedef struct _clients {
 } Clients;
 
 void init_client_manager();
-int insert_client(char*, char*, char*);
+int insert_client(char*, char*);
 Clients *search_client(char*, int*);
 int remove_client(int);
 int free_client_manager();

@@ -59,8 +59,10 @@ int main (int argc, char **argv) {
    /* Armazena o tamanho da string lida do cliente */
    ssize_t n;
    /* Iniciando o gerenciador de clientes */
-   Clients *client;
-   char* nickname, host, username;
+   Clients *client = NULL;
+   char nickname[10] = "", host[100] = "", username[100] = "";
+   /* Armazena o índice do vetor de clientes */
+   int i;
    init_client_manager();
    
 	if (argc != 2) {
@@ -171,7 +173,32 @@ int main (int argc, char **argv) {
 	    /* Interpretando os tokens */
 	    if(!strcmp("NICK", command)){
 	      /* Tratamento do comando NICK */
-	      /* Pegar informações do cliente */
+	      /* TODO: Pegar informações do cliente */
+	      /* TODO: Protocolo de entrada do controle de concorrencia */
+	      if(!strlen(nickname)){
+		/* Novo cliente */
+		/* Tratando colisão */
+		if(search_client(params, &i) != (Clients*)-1)
+		  sprintf(recvline, "%s :Nickname collision KILL\n", params);
+		else{
+		  strcpy(nickname, params);
+		  /* Inserindo novo cliente */
+		  /* TODO: Atualizar a inserção do host do cliente */
+		  insert_client(nickname, "host");
+		}
+	      }
+	      else{
+		/* Cliente atualizando nickname */
+		client = search_client(nickname, &i);
+		/* Tratando colisão */
+		if(search_client(params, &i) != (Clients*)-1)
+		  sprintf(recvline, "%s :Nickname is already in use\n", params);
+		else{
+		  strcpy(nickname, params);
+		  strcpy(client->nickname, nickname);
+		}
+	      }
+	      /* TODO: Protocolo de saída do controle de concorrencia */
 	    } else if(!strcmp("LIST", command)){
 	      /* Lista os canais */
 	    } else if(!strcmp("JOIN", command)){
