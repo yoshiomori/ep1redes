@@ -196,7 +196,7 @@ int main (int argc, char **argv) {
 	  else if(!strcmp("PRIVMSG", command) && strlen(nickname));
 	  else if(!strcmp("DCC", command) && strlen(nickname));
 	  else if(!strcmp("PART", command) && strlen(nickname))
-	    state = 8;
+	    foreach_params_goto(8);
 	  else if(!strcmp("QUIT", command))
 	    state = 7;
 	  else{
@@ -294,15 +294,13 @@ int main (int argc, char **argv) {
 	  else{
 	      sprintf(recvline, "%s :No such channel\n", param);
 	      write(connfd, recvline, strlen(recvline));
-	      state = 1;
+	      state = back;
 	      break;
 	  }
 	  if(search_client(channel, nickname) == (Client*)-1)
 	    if(insert_client(channel, nickname, host)){
 	      sprintf(recvline, "%s :Cannot join channel\n", channel->name);
 	      write(connfd, recvline, strlen(recvline));
-	      state = 1;
-	      break;
 	    }
 	  state = back;
 	  break;
@@ -318,7 +316,24 @@ int main (int argc, char **argv) {
 	  state = 0;
 	  break;
 	case 8: /* PART */
-	  
+	  if(!strcmp(sbt->name, param))
+	    channel = sbt;
+	  else if(!strcmp(globo->name, param))
+	    channel = globo;
+	  else{
+	      sprintf(recvline, "%s :No such channel\n", param);
+	      write(connfd, recvline, strlen(recvline));
+	      state = back;
+	      break;
+	  }
+	  client = search_client(channel, nickname);
+	  if(client == (Client*)-1){
+	    sprintf(recvline, "%s :You're not on that channel\n", param);
+	    write(connfd, recvline, strlen(recvline));
+	  }
+	  else
+	    remove_client(channel, client);
+	  state = back;
 	  break;
 	default:
 	  state = 0;
