@@ -44,6 +44,7 @@
 #define LISTENQ 1
 #define MAXDATASIZE 100
 #define MAXLINE 4096
+#define foreach_params_goto(A) ({state = 4; send_to = (A);})
 
 int main (int argc, char **argv) {
   /* Os sockets. Um que será o socket que vai escutar pelas conexões
@@ -62,7 +63,7 @@ int main (int argc, char **argv) {
   Client *client = NULL;
   char nickname[10] = "", host[100] = "", username[100] = "";
   /* Armazena o índice do vetor de clientes */
-  int i, state = 1, back;
+  int i, state = 1, back, send_to;
   int quit = 1;
   Channel *clients = init_client_manager();
   Channel *sbt = init_client_manager();
@@ -191,7 +192,7 @@ int main (int argc, char **argv) {
 	  else if(!strcmp("LIST", command) && strlen(nickname))
 	    state = 3;
 	  else if(!strcmp("JOIN", command) && strlen(nickname))
-	    state = 4;
+	    foreach_params_goto(6);
 	  else if(!strcmp("PRIVMSG", command) && strlen(nickname));
 	  else if(!strcmp("DCC", command) && strlen(nickname));
 	  else if(!strcmp("PART", command) && strlen(nickname))
@@ -275,7 +276,7 @@ int main (int argc, char **argv) {
 	  }
 	  param = strtok(params, ",");
 	  back = 5;
-	  state = 6;
+	  state = send_to;
 	  break;
 	case 5:/* Trata dos outros parametros do comando JOIN */
 	  param = strtok(NULL, ",");
@@ -283,7 +284,7 @@ int main (int argc, char **argv) {
 	    state = 1;
 	    break;
 	  }	  
-	  state = 6;
+	  state = send_to;
 	  break;
 	case 6:/* Tratamento dos parametros do JOIN */
 	  if(!strcmp(sbt->name, param))
