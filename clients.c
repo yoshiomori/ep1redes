@@ -17,19 +17,19 @@ union semun {                   /* Used in calls to semctl() */
 };
 
 
-int shmid_clients, shmid_first_free_pos, semid, *first_free_pos;
-Client *clients;
+int shmid_clients, shmid_first_free, semid;
+Client *clients, **first_free;
 
 void init_client_manager(){
   shmid_clients = shmget(IPC_PRIVATE, MAXCLIENTS * sizeof(Client), S_IRWUSR);
-  shmid_first_free_pos = shmget(IPC_PRIVATE, sizeof(int), S_IRWUSR);
-  if((shmid_first_free_pos | shmid_clients) == -1){
+  shmid_first_free = shmget(IPC_PRIVATE, sizeof(Client*), S_IRWUSR);
+  if((shmid_first_free | shmid_clients) == -1){
     perror("shmget");
     exit(EXIT_FAILURE);
   }
-  first_free_pos = (int*)shmat(shmid_first_free_pos, NULL, 0);
-  *first_free_pos = 0;
   clients = (Client*)shmat(shmid_clients, NULL, 0);
+  first_free = (Client**)shmat(shmid_first_free, NULL, 0);
+  *first_free = clients;
 }
 
 /* 
@@ -39,22 +39,22 @@ void init_client_manager(){
  * 0 se for sucesso.
  */
 int insert_client(char *nickname, char *host){
-  if(*first_free_pos >= MAXCLIENTS || !nickname || !host)
+  if(*first_free >= clients + MAXCLIENTS)
     return -1;
-  strcpy(clients[*first_free_pos].nickname, nickname);
-  strcpy(clients[(*first_free_pos)++].host, host);
+  strcpy((*first_free)->nickname, nickname);
+  strcpy((*first_free)->host, host);
+  (*first_free)++;
   return 0;
 }
 
-Client *search_client(char *nickname, int *i){
-  if(!nickname || !i)
-    return (Client*) -1;
-  for(*i = 0; *i < *first_free_pos; (*i)++)
-    if(!strcmp(clients[*i].nickname, nickname))
+Client *search_client(char *nickname){
+  Client *client;
+  for(client = clients; client < *first_free; client++)
+    if(!strcmp(client->nickname, nickname))
       break;
-  if(*i == *first_free_pos)
+  if(client == *first_free)
     return (Client*) -1;
-  return clients + *i;
+  return client;
 }
 
 /*
@@ -62,11 +62,9 @@ Client *search_client(char *nickname, int *i){
  * Retorna 0 no sucesso e -1 no caso em que i está
  * fora do intervalo.
  */
-int remove_client(int i){
-  if(i < 0 || i >= MAXCLIENTS)
-    return -1;
-  memmove(clients + i, clients + i + 1, (*first_free_pos - i) * sizeof * clients);
-  (*first_free_pos)--;
+int remove_client(Client *client){
+  memmove(client, client + 1, (*first_free - client) * sizeof * clients);
+  (*first_free)--;
   return 0;
 }
 
@@ -75,5 +73,5 @@ int free_client_manager(){
 }
 
 int nclients(){
-  return *first_free_pos;
+  return *first_free - clients;
 }

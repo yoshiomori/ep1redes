@@ -183,7 +183,7 @@ int main (int argc, char **argv) {
 	      if(!strlen(nickname)){
 		/* Novo cliente */
 		/* Tratando colisão */
-		if(search_client(params, &i) != (Client*)-1)
+		if(search_client(params) != (Client*)-1)
 		  sprintf(recvline, "%s :Nickname collision KILL\n", params);
 		else{
 		  strcpy(nickname, params);
@@ -194,9 +194,9 @@ int main (int argc, char **argv) {
 	      }
 	      else{
 		/* Cliente atualizando nickname */
-		client = search_client(nickname, &i);
+		client = search_client(nickname);
 		/* Tratando colisão */
-		if(search_client(params, &i) != (Client*)-1)
+		if(search_client(params) != (Client*)-1)
 		  sprintf(recvline, "%s :Nickname is already in use\n", params);
 		else{
 		  strcpy(nickname, params);
@@ -217,8 +217,8 @@ int main (int argc, char **argv) {
 	    } else if(!strcmp("QUIT", command)){
 	      /* Desconectar do servidor */
 	      quit = 0;
-	      search_client(nickname, &i);
-	      remove_client(i);
+	      client = search_client(nickname);
+	      remove_client(client);
 	    } else{
 	      /* Comando não válido */
 	      if(strlen(nickname)){
