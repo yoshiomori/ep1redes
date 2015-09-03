@@ -64,7 +64,7 @@ int main (int argc, char **argv) {
    /* Armazena o índice do vetor de clientes */
    int i;
    int quit = 1;
-   init_client_manager();
+   Channel *clients = init_client_manager();
    
 	if (argc != 2) {
       fprintf(stderr,"Uso: %s <Porta>\n",argv[0]);
@@ -183,20 +183,20 @@ int main (int argc, char **argv) {
 	      if(!strlen(nickname)){
 		/* Novo cliente */
 		/* Tratando colisão */
-		if(search_client(params) != (Client*)-1)
+		if(search_client(clients, params) != (Client*)-1)
 		  sprintf(recvline, "%s :Nickname collision KILL\n", params);
 		else{
 		  strcpy(nickname, params);
 		  /* Inserindo novo cliente */
 		  /* TODO: Atualizar a inserção do host do cliente */
-		  insert_client(nickname, "host");
+		  insert_client(clients, nickname, "host");
 		}
 	      }
 	      else{
 		/* Cliente atualizando nickname */
-		client = search_client(nickname);
+		client = search_client(clients, nickname);
 		/* Tratando colisão */
-		if(search_client(params) != (Client*)-1)
+		if(search_client(clients, params) != (Client*)-1)
 		  sprintf(recvline, "%s :Nickname is already in use\n", params);
 		else{
 		  strcpy(nickname, params);
@@ -217,8 +217,8 @@ int main (int argc, char **argv) {
 	    } else if(!strcmp("QUIT", command)){
 	      /* Desconectar do servidor */
 	      quit = 0;
-	      client = search_client(nickname);
-	      remove_client(client);
+	      client = search_client(clients, nickname);
+	      remove_client(clients, client);
 	    } else{
 	      /* Comando não válido */
 	      if(strlen(nickname)){
