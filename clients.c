@@ -18,10 +18,10 @@ union semun {                   /* Used in calls to semctl() */
 
 
 int shmid_clients, shmid_first_free_pos, semid, *first_free_pos;
-Clients *clients;
+Client *clients;
 
 void init_client_manager(){
-  shmid_clients = shmget(IPC_PRIVATE, MAXCLIENTS * sizeof(Clients), S_IRWUSR);
+  shmid_clients = shmget(IPC_PRIVATE, MAXCLIENTS * sizeof(Client), S_IRWUSR);
   shmid_first_free_pos = shmget(IPC_PRIVATE, sizeof(int), S_IRWUSR);
   if((shmid_first_free_pos | shmid_clients) == -1){
     perror("shmget");
@@ -29,7 +29,7 @@ void init_client_manager(){
   }
   first_free_pos = (int*)shmat(shmid_first_free_pos, NULL, 0);
   *first_free_pos = 0;
-  clients = (Clients*)shmat(shmid_clients, NULL, 0);
+  clients = (Client*)shmat(shmid_clients, NULL, 0);
 }
 
 /* 
@@ -46,14 +46,14 @@ int insert_client(char *nickname, char *host){
   return 0;
 }
 
-Clients *search_client(char *nickname, int *i){
+Client *search_client(char *nickname, int *i){
   if(!nickname || !i)
-    return (Clients*) -1;
+    return (Client*) -1;
   for(*i = 0; *i < *first_free_pos; (*i)++)
     if(!strcmp(clients[*i].nickname, nickname))
       break;
   if(*i == *first_free_pos)
-    return (Clients*) -1;
+    return (Client*) -1;
   return clients + *i;
 }
 

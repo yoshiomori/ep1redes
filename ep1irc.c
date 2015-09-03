@@ -59,7 +59,7 @@ int main (int argc, char **argv) {
    /* Armazena o tamanho da string lida do cliente */
    ssize_t n;
    /* Iniciando o gerenciador de clientes */
-   Clients *client = NULL;
+   Client *client = NULL;
    char nickname[10] = "", host[100] = "", username[100] = "";
    /* Armazena o índice do vetor de clientes */
    int i;
@@ -183,7 +183,7 @@ int main (int argc, char **argv) {
 	      if(!strlen(nickname)){
 		/* Novo cliente */
 		/* Tratando colisão */
-		if(search_client(params, &i) != (Clients*)-1)
+		if(search_client(params, &i) != (Client*)-1)
 		  sprintf(recvline, "%s :Nickname collision KILL\n", params);
 		else{
 		  strcpy(nickname, params);
@@ -196,7 +196,7 @@ int main (int argc, char **argv) {
 		/* Cliente atualizando nickname */
 		client = search_client(nickname, &i);
 		/* Tratando colisão */
-		if(search_client(params, &i) != (Clients*)-1)
+		if(search_client(params, &i) != (Client*)-1)
 		  sprintf(recvline, "%s :Nickname is already in use\n", params);
 		else{
 		  strcpy(nickname, params);
