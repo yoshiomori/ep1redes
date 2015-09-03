@@ -55,18 +55,19 @@ int main (int argc, char **argv) {
    * é o processo pai */
   pid_t childpid;
   /* Armazena linhas recebidas do cliente */
-  char	recvline[MAXLINE + 1], command[MAXLINE + 1], param1[MAXLINE + 1], param2[MAXLINE + 1];
+  char	recvline[MAXLINE + 1], command[MAXLINE + 1], params[MAXLINE + 1], *param;
   /* Armazena o tamanho da string lida do cliente */
   ssize_t n;
   /* Iniciando o gerenciador de clientes */
   Client *client = NULL;
   char nickname[10] = "", host[100] = "", username[100] = "";
   /* Armazena o índice do vetor de clientes */
-  int i;
+  int i, state = 1, back;
   int quit = 1;
   Channel *clients = init_client_manager();
   Channel *sbt = init_client_manager();
   Channel *globo = init_client_manager();
+  Channel *channel;
   strcpy(sbt->name,"sbt");
   strcpy(globo->name,"globo");
    
@@ -166,105 +167,162 @@ int main (int argc, char **argv) {
       /* ========================================================= */
       /* TODO: É esta parte do código que terá que ser modificada
        * para que este servidor consiga interpretar comandos IRC   */
-      while (quit) {
-	n=read(connfd, recvline, MAXLINE);
-	if(n < 0)
-	  break;
-	recvline[n]=0;
-	printf("[Cliente conectado no processo filho %d enviou:] ",getpid());
-	if ((fputs(recvline,stdout)) == EOF) {
-	  perror("fputs :( \n");
-	  exit(6);
-	}
-	/* Quebrando a mensagem em tokens */
-	sscanf(recvline, "%s %s", command, param1);
-	recvline[0] = '\0';
-	/* Interpretando os tokens */
-	if(!strcmp("NICK", command)){
-	  /* Tratamento do comando NICK */
-	  /* TODO: Pegar informações do cliente */
-	  /* TODO: Protocolo de entrada do controle de concorrencia */
-	  if(!strlen(nickname)){
-	    /* Novo cliente */
-	    /* Tratando colisão */
-	    if(search_client(clients, param1) != (Client*)-1)
-	      sprintf(recvline, "%s :Nickname collision KILL\n", param1);
-	    else{
-	      strcpy(nickname, param1);
-	      /* Inserindo novo cliente */
-	      /* TODO: Atualizar a inserção do host do cliente */
-	      insert_client(clients, nickname, "host");
-	    }
+      while(state){
+	switch(state){
+	case 1:
+	  n = read(connfd, recvline, MAXLINE);
+	  if(n < 0){
+	    state = 0;
+	    break;
 	  }
+	  recvline[n] = '\0';
+	  printf("[Cliente conectado no processo filho %d enviou:] ",getpid());
+	  if ((fputs(recvline,stdout)) == EOF) {
+	    perror("fputs :( \n");
+	    exit(6);
+	  }
+	  command[0] = '\0';
+	  params[0] = '\0';
+	  /* Quebrando a mensagem em tokens */
+	  sscanf(recvline, "%s %s", command, params);
+	  /* Interpretando os comandos */
+	  if(!strcmp("NICK", command))
+	    state = 2;
+	  else if(!strcmp("LIST", command) && strlen(nickname))
+	    state = 3;
+	  else if(!strcmp("JOIN", command) && strlen(nickname))
+	    state = 4;
+	  else if(!strcmp("PRIVMSG", command) && strlen(nickname));
+	  else if(!strcmp("DCC", command) && strlen(nickname));
+	  else if(!strcmp("PART", command) && strlen(nickname))
+	    state = 8;
+	  else if(!strcmp("QUIT", command))
+	    state = 7;
 	  else{
-	    /* Cliente atualizando nickname */
+	    /* Comando não válido */
+	    if(strlen(nickname)){
+	      /* Usuário registrado mas comando inexistente */
+	      sprintf(recvline, "%s :Unknown command\n", command);
+	      write(connfd, recvline, strlen(recvline));
+	      break;
+	    }
+	    sprintf(recvline, ":You have not registered\n");
+	    write(connfd, recvline, strlen(recvline));
+	  }
+	  break;
+	case 2:/* Commando NICK */
+	  n = strlen(params);
+	  if(!n){
+	    sprintf(recvline, ":No nickname given\n");
+	    write(connfd, recvline, strlen(recvline));
+	    state = 1;
+	    break;
+	  }
+	  if(n > 10){
+	    sprintf(recvline, "%s :Erroneus nickname\n", params);
+	    write(connfd, recvline, strlen(recvline));
+	    state = 1;
+	    break;
+	  }
+	  client = search_client(clients, params);
+	  if(client != (Client*)-1){
+	    /* Mesmo cliente */
+	    if(!strcmp(client->nickname, params)){
+	      sprintf(recvline, "%s :Nickname is already in use\n", params);
+	      write(connfd, recvline, strlen(recvline));
+	    }
+	    state = 1;
+	    break;
+	  }
+	  
+	  if(!strlen(nickname)){
+	    /* Tratando de cliente novo */
+	    /* TODO: Pegar o host name do cliente */
+	    host[0] = '\0';/* Provisório */
+	    insert_client(clients, params, host);
+	    strcpy(nickname, params);
+	  }
+	  else {
+	    /* Tratando de atualização de nickname */
 	    client = search_client(clients, nickname);
-	    /* Tratando colisão */
-	    if(search_client(clients, param1) != (Client*)-1)
-	      sprintf(recvline, "%s :Nickname is already in use\n", param1);
-	    else{
-	      strcpy(nickname, param1);
-	      strcpy(client->nickname, nickname);
-	    }
+	    strcpy(client->nickname, params);
+	    client = search_client(sbt, nickname);
+	    if(client != (Client*)-1)
+	      strcpy(client->nickname, params);
+	    client = search_client(globo, nickname);
+	    if(client != (Client*)-1)
+	      strcpy(client->nickname, params);
 	  }
-	  /* TODO: Protocolo de saída do controle de concorrencia */
-	} else if(!strcmp("LIST", command) && strlen(nickname)){
-	  /* Lista os canais */
-	  sprintf(recvline, ":%s\n%s\n", sbt->name, globo->name);
-	} else if(!strcmp("JOIN", command) && strlen(nickname)){
-	  /* Entra no canal */
-	  if(strlen(param1)){
-	    if(!strcmp(sbt->name, param1)){
-	      if(search_client(sbt, nickname) == (Client*)-1)
-		if(insert_client(sbt, nickname, "host"))
-		  sprintf(recvline, "%s :Cannot join channel\n", sbt->name);
-	    }
-	    else if(!strcmp(globo->name, param1)){
-	      if(search_client(globo, nickname) == (Client*)-1)
-		if(insert_client(globo, nickname, "host"))
-		  sprintf(recvline, "%s :Cannot join channel\n", globo->name);
-	    }
-	    else
-	      sprintf(recvline, "%s :No such channel\n", param1);
-	    if(strlen(param2)){
-	      if(!strcmp(sbt->name, param2)){
-		if(search_client(sbt, nickname) == (Client*)-1)
-		  if(insert_client(sbt, nickname, "host"))
-		    sprintf(recvline, "%s :Cannot join channel\n", sbt->name);
-	      }
-	      else if(!strcmp(globo->name, param2)){
-		if(search_client(globo, nickname) == (Client*)-1)
-		  if(insert_client(globo, nickname, "host"))
-		    sprintf(recvline, "%s :Cannot join channel\n", globo->name);
-	      }
-	      else
-		sprintf(recvline, "%s :No such channel\n", param2);
-	    }
-	  }
-	  else
+	  state = 1;
+	  break;
+	case 3:
+	  sprintf(recvline, "Channel :Users Name\n");
+	  write(connfd, recvline, strlen(recvline));
+	  sprintf(recvline, "%s\n", sbt->name);
+	  write(connfd, recvline, strlen(recvline));
+	  sprintf(recvline, "%s\n", globo->name);
+	  write(connfd, recvline, strlen(recvline));
+	  sprintf(recvline, ":End of /LIST\n");
+	  write(connfd, recvline, strlen(recvline));
+	  state = 1;
+	  break;
+	case 4:/* Trata em especial o primeiro parametro do comando JOIN */
+	  if(!strlen(params)){
 	    sprintf(recvline, "%s :Not enough parameters\n", command);
-	} else if(!strcmp("PRIVMSG", command) && strlen(nickname)){
-	  /* Enviar mensagem para o canal especificado */
-	} else if(!strcmp("DCC", command) && strlen(nickname)){
-	  /* Enviar uma arquivo para o cliente especificado */
-	} else if(!strcmp("PART", command) && strlen(nickname)){
-	  /* Saír do canal */
-	} else if(!strcmp("QUIT", command)){
-	  /* Desconectar do servidor */
-	  quit = 0;
+	    write(connfd, recvline, strlen(recvline));
+	    state = 1;
+	    break;
+	  }
+	  param = strtok(params, ",");
+	  back = 5;
+	  state = 6;
+	  break;
+	case 5:/* Trata dos outros parametros do comando JOIN */
+	  param = strtok(NULL, ",");
+	  if(!param){
+	    state = 1;
+	    break;
+	  }	  
+	  state = 6;
+	  break;
+	case 6:/* Tratamento dos parametros do JOIN */
+	  if(!strcmp(sbt->name, param))
+	    channel = sbt;
+	  else if(!strcmp(globo->name, param))
+	    channel = globo;
+	  else{
+	      sprintf(recvline, "%s :No such channel\n", param);
+	      write(connfd, recvline, strlen(recvline));
+	      state = 1;
+	      break;
+	  }
+	  if(search_client(channel, nickname) == (Client*)-1)
+	    if(insert_client(channel, nickname, host)){
+	      sprintf(recvline, "%s :Cannot join channel\n", channel->name);
+	      write(connfd, recvline, strlen(recvline));
+	      state = 1;
+	      break;
+	    }
+	  state = back;
+	  break;
+	case 7:/* QUIT */
 	  client = search_client(clients, nickname);
 	  remove_client(clients, client);
-	} else{
-	  /* Comando não válido */
-	  if(strlen(nickname)){
-	    /* Usuário registrado mas comando inexistente */
-	    sprintf(recvline, "%s :Unknown command\n", command);
-	  } else
-	    sprintf(recvline, ":You have not registered\n", param1);
+	  client = search_client(sbt, nickname);
+	  if(client != (Client*)-1)
+	    remove_client(sbt, client);
+	  client = search_client(globo, nickname);
+	  if(client != (Client*)-1)
+	    remove_client(globo, client);
+	  state = 0;
+	  break;
+	case 8: /* PART */
+	  
+	  break;
+	default:
+	  state = 0;
+	  break;
 	}
-	/* Se tiver mensagem envia */
-	if(recvline)
-	  write(connfd, recvline, strlen(recvline));
       }
       /* ========================================================= */
       /* ========================================================= */

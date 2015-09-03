@@ -10,7 +10,7 @@ typedef struct _client {
 
 typedef struct _channel {
   int shmid;
-  char name[100];
+  char name[200];
   Client clients[MAXCLIENTS];
   Client *n;
 } Channel;
