@@ -63,7 +63,7 @@ int main (int argc, char **argv) {
   Client *client = NULL;
   char nickname[10] = "", host[100] = "", username[100] = "";
   /* Armazena o índice do vetor de clientes */
-  int i, state = 1, back, send_to;
+  int i, state = 1, send_to;
   int quit = 1;
   Channel *clients = init_client_manager();
   Channel *sbt = init_client_manager();
@@ -275,10 +275,9 @@ int main (int argc, char **argv) {
 	    break;
 	  }
 	  param = strtok(params, ",");
-	  back = 5;
 	  state = send_to;
 	  break;
-	case 5:/* Trata dos outros parametros do comando JOIN */
+	case 5:
 	  param = strtok(NULL, ",");
 	  if(!param){
 	    state = 1;
@@ -294,7 +293,7 @@ int main (int argc, char **argv) {
 	  else{
 	      sprintf(recvline, "%s :No such channel\n", param);
 	      write(connfd, recvline, strlen(recvline));
-	      state = back;
+	      state = 5;
 	      break;
 	  }
 	  if(search_client(channel, nickname) == (Client*)-1)
@@ -302,7 +301,7 @@ int main (int argc, char **argv) {
 	      sprintf(recvline, "%s :Cannot join channel\n", channel->name);
 	      write(connfd, recvline, strlen(recvline));
 	    }
-	  state = back;
+	  state = 5;
 	  break;
 	case 7:/* QUIT */
 	  client = search_client(clients, nickname);
@@ -323,7 +322,7 @@ int main (int argc, char **argv) {
 	  else{
 	      sprintf(recvline, "%s :No such channel\n", param);
 	      write(connfd, recvline, strlen(recvline));
-	      state = back;
+	      state = 5;
 	      break;
 	  }
 	  client = search_client(channel, nickname);
@@ -333,7 +332,7 @@ int main (int argc, char **argv) {
 	  }
 	  else
 	    remove_client(channel, client);
-	  state = back;
+	  state = 5;
 	  break;
 	default:
 	  state = 0;
